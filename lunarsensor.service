@@ -1,0 +1,14 @@
+[Unit]
+Description=Lunar Sensor Service
+After=multi-user.target
+
+[Service]
+Type=simple
+User=xu
+WorkingDirectory=/home/xu/lunarsensor
+ExecStart=/usr/bin/make -f /home/xu/lunarsensor/Makefile
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
