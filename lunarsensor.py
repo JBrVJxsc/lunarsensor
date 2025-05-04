@@ -6,6 +6,7 @@ import time
 import aiohttp
 from fastapi import FastAPI, Request
 from sse_starlette.sse import EventSourceResponse
+import TSL2591
 
 app = FastAPI()
 logging.basicConfig()
@@ -16,14 +17,23 @@ log.level = logging.DEBUG if os.getenv("SENSOR_DEBUG") == "1" else logging.INFO
 POLLING_SECONDS = 2
 CLIENT = None
 last_lux = 400
+sensor = None
 
 
 @app.on_event("startup")
 async def startup_event():
-    global CLIENT
+    global CLIENT, sensor
 
     CLIENT = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8))
     await CLIENT.__aenter__()
+    
+    # Initialize the TSL2591 sensor
+    try:
+        sensor = TSL2591.TSL2591()
+        log.info("TSL2591 sensor initialized successfully")
+    except Exception as e:
+        log.error(f"Failed to initialize TSL2591 sensor: {e}")
+        sensor = None
 
 
 @app.on_event("shutdown")
@@ -67,8 +77,13 @@ async def events(request: Request):
 
 
 async def read_lux():
-    if os.path.exists("/tmp/lux"):
-        with open("/tmp/lux") as f:
-            return float(f.read().strip() or "400.0")
-
-    return 400.00
+    if sensor is None:
+        log.error("Sensor not initialized")
+        return 400.0
+        
+    try:
+        lux = sensor.Lux
+        return float(lux)
+    except Exception as e:
+        log.error(f"Error reading from sensor: {e}")
+        return 400.0
