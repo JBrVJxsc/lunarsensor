@@ -14,7 +14,7 @@ log = logging.getLogger("lunarsensor")
 log.level = logging.DEBUG if os.getenv("SENSOR_DEBUG") == "1" else logging.INFO
 
 
-POLLING_SECONDS = 2
+POLLING_SECONDS = 1
 CLIENT = None
 last_lux = 400
 sensor = None
