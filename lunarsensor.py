@@ -67,6 +67,16 @@ async def sensor():
     return await make_lux_response()
 
 
+@app.get("/sensor/ambient_light_tsl2561")
+async def sensor_tsl2561():
+    return await make_lux_response()
+
+
+@app.get("/sensor/ambient_light_tsl2591")
+async def sensor_tsl2591():
+    return await make_lux_response()
+
+
 @app.get("/events")
 async def events(request: Request):
     event_generator = sensor_reader(request)
