@@ -3,3 +3,5 @@ fastapi==0.92.0
 sse-starlette==1.2.1
 uvicorn==0.20.0
 pydantic==1.10.10
+RPi.GPIO
+smbus
