@@ -7,7 +7,7 @@ if os.path.exists(libdir):
     sys.path.append(libdir)
 
 import logging
-from waveshare_TSL2591 import TSL2591
+import TSL2591
 
 logging.basicConfig(level=logging.INFO)
 
