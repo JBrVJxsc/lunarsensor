@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import asyncio
 
 import aiohttp
 from fastapi import FastAPI, Request
@@ -18,7 +19,7 @@ POLLING_SECONDS = 2
 CLIENT = None
 last_lux = 400
 sensor = None
-
+sensor_lock = asyncio.Lock()  # serialize access to the I²C bus
 
 @app.on_event("startup")
 async def startup_event():
@@ -58,9 +59,7 @@ async def make_lux_response():
 async def sensor_reader(request):
     while not await request.is_disconnected():
         yield {"event": "state", "data": json.dumps(await make_lux_response())}
-
-        time.sleep(POLLING_SECONDS)
-
+        await asyncio.sleep(POLLING_SECONDS)
 
 @app.get("/sensor/ambient_light")
 async def sensor():
@@ -92,8 +91,12 @@ async def read_lux():
         return 400.0
         
     try:
-        lux = sensor.Lux
-        return float(lux)
+        # Run the blocking I²C read in the default executor,
+        # with a lock to prevent bus collisions
+        async with sensor_lock:
+            loop = asyncio.get_running_loop()
+            lux = await loop.run_in_executor(None, lambda: float(sensor.Lux))
+        return lux
     except Exception as e:
         log.error(f"Error reading from sensor: {e}")
         return 400.0
