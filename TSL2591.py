@@ -187,58 +187,56 @@ class TSL2591:
     
     @property
     def Lux(self):
-        self.Enable()
-        for i in range(0, self.IntegralTime+2):
-            time.sleep(0.1)
-        if(GPIO.input(INI_PIN) == GPIO.HIGH):
-            print ('INT 0')
-        else:
-            print ('INT 1')
-        channel_0 = self.Read_CHAN0()
-        channel_1 = self.Read_CHAN1()
-        self.Disable()
+        try:
+            self.Enable()
+            # Wait for the sensor to stabilize
+            time.sleep(0.1 * (self.IntegralTime + 2))
+            
+            # Read the values
+            channel_0 = self.Read_CHAN0()
+            channel_1 = self.Read_CHAN1()
+            
+            # Clear any pending interrupts
+            self.Write_Byte(0xE7, 0x13)
+            
+            # Calculate lux value
+            atime = 100.0 * self.IntegralTime + 100.0
+            
+            # Set the maximum sensor counts based on the integration time (atime) setting
+            if self.IntegralTime == ATIME_100MS:
+                max_counts = MAX_COUNT_100MS
+            else:
+                max_counts = MAX_COUNT
 
-        self.Enable()
-        self.Write_Byte(0xE7, 0x13)#Clear interrupt flag
-        self.Disable()
-
-        atime = 100.0 * self.IntegralTime + 100.0
-        
-        # Set the maximum sensor counts based on the integration time (atime) setting
-        if self.IntegralTime == ATIME_100MS:
-            max_counts = MAX_COUNT_100MS
-        else:
-            max_counts = MAX_COUNT
-
-        if channel_0 >= max_counts or channel_1 >= max_counts:
-            gain_t = self.Get_Gain()
-            if(gain_t != LOW_AGAIN):
-                gain_t = ((gain_t>>4)-1)<<4
-                self.Set_Gain(gain_t)
-                channel_0 = 0
-                channel_1 = 0
-                while(channel_0 <= 0 and channel_1 <=0):
-                    channel_0 = self.Read_CHAN0()
-                    channel_1 = self.Read_CHAN1()
-                    time.sleep(0.1)
-            else :
-                raise RuntimeError('Numerical overflow!')
-        again = 1.0
-        if self.Gain == MEDIUM_AGAIN:
-            again = 25.0
-        elif self.Gain == HIGH_AGAIN:
-            again = 428.0
-        elif self.Gain == MAX_AGAIN:
-            again = 9876.0
-        
-        Cpl = (atime * again) / LUX_DF
-        lux1 = (channel_0 - (2 * channel_1)) / Cpl
-        # lux2 = ((0.6 * channel_0) - (channel_1)) / Cpl
-        # This is a two segment lux equation where the first 
-        # segment (Lux1) covers fluorescent and incandescent light 
-        # and the second segment (Lux2) covers dimmed incandescent light
-        
-        return max(int(lux1), int(0))
+            if channel_0 >= max_counts or channel_1 >= max_counts:
+                gain_t = self.Get_Gain()
+                if(gain_t != LOW_AGAIN):
+                    gain_t = ((gain_t>>4)-1)<<4
+                    self.Set_Gain(gain_t)
+                    channel_0 = 0
+                    channel_1 = 0
+                    while(channel_0 <= 0 and channel_1 <=0):
+                        channel_0 = self.Read_CHAN0()
+                        channel_1 = self.Read_CHAN1()
+                        time.sleep(0.1)
+                else:
+                    raise RuntimeError('Numerical overflow!')
+                    
+            again = 1.0
+            if self.Gain == MEDIUM_AGAIN:
+                again = 25.0
+            elif self.Gain == HIGH_AGAIN:
+                again = 428.0
+            elif self.Gain == MAX_AGAIN:
+                again = 9876.0
+            
+            Cpl = (atime * again) / LUX_DF
+            lux1 = (channel_0 - (2 * channel_1)) / Cpl
+            
+            return max(int(lux1), int(0))
+        finally:
+            # Always disable the sensor when done
+            self.Disable()
     
     def SET_InterruptThreshold(self, HIGH, LOW):
         self.Enable()

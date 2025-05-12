@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import threading
 
 import aiohttp
 from fastapi import FastAPI, Request
@@ -18,6 +19,7 @@ POLLING_SECONDS = 2
 CLIENT = None
 last_lux = 400
 sensor = None
+sensor_lock = threading.Lock()  # Add a lock for thread-safe sensor access
 
 
 @app.on_event("startup")
@@ -92,8 +94,9 @@ async def read_lux():
         return 400.0
         
     try:
-        lux = sensor.Lux
-        return float(lux)
+        with sensor_lock:  # Use the lock to ensure only one thread accesses the sensor at a time
+            lux = sensor.Lux
+            return float(lux)
     except Exception as e:
         log.error(f"Error reading from sensor: {e}")
         return 400.0
