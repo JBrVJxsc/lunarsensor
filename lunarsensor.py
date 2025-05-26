@@ -96,8 +96,8 @@ async def read_lux():
         async with sensor_lock:
             loop = asyncio.get_running_loop()
             lux = await loop.run_in_executor(None, lambda: float(sensor.Lux))
-            # Round to nearest 10
-            lux = round(lux / 10) * 10
+            # Round to nearest 50 for meaningful brightness changes
+            lux = round(lux / 50) * 50
         return lux
     except Exception as e:
         log.error(f"Error reading from sensor: {e}")
